@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synapse — Real-Time Multiplayer Collaboration Platform</title>
+  <meta name="description" content="Synapse is a high-performance, real-time multiplayer collaboration platform featuring Yjs CRDT shared notepad, atomic counter, live polls, quizzes, and 3-tool whiteboard.">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .hero-section {
+      max-width: 900px;
+      margin: 60px auto 40px;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .hero-badge {
+      margin-bottom: 16px;
+    }
+    .hero-title {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+    .hero-title span {
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 620px;
+      margin: 0 auto 36px;
+      line-height: 1.6;
+    }
+    .join-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-xl);
+      max-width: 480px;
+      margin: 0 auto 60px;
+      padding: 32px;
+      text-align: left;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      max-width: 1040px;
+      margin: 0 auto 80px;
+      padding: 0 20px;
+    }
+    .feature-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .feature-item h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+    .feature-item p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .avatar-preview {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <a href="/" class="brand-logo" id="brand-link">
+        <div class="brand-icon">⚡</div>
+        <span>Synapse</span>
+      </a>
+      <span class="badge badge-accent">v1.0 Production</span>
+    </div>
+    <div class="header-right">
+      <div class="badge badge-success" id="storage-status-badge">
+        <span class="dot dot-online"></span>
+        <span id="storage-status-text">Checking Persistence...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero & Entry Section -->
+  <main class="hero-section">
+    <div class="hero-badge">
+      <span class="badge badge-accent">Collaborative Multiplayer Engine</span>
+    </div>
+    <h1 class="hero-title">
+      Where Teams Think, Solve, and <span>Create in Real Time</span>.
+    </h1>
+    <p class="hero-subtitle">
+      Zero-conflict Yjs CRDT documents, atomic counter operations, synchronized room themes, and interactive live activities: Polls, Quizzes, and Whiteboards.
+    </p>
+
+    <!-- Join / Create Room Card -->
+    <div class="join-card">
+      <form id="lobby-form" onsubmit="handleEnterRoom(event)">
+        <div class="input-group">
+          <label class="input-label" for="display-name">Your Display Name</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <div id="avatar-preview" class="avatar-preview" style="background-color: #4f46e5;">A</div>
+            <input type="text" id="display-name" class="input-field" style="flex: 1;" placeholder="e.g., Alex Rivers" required maxlength="32">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label" for="room-code">Room Code</label>
+          <input type="text" id="room-code" class="input-field" placeholder="e.g., syn-brainstorm-42" required maxlength="32">
+          <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Share this room code with teammates to collaborate together.</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px;">
+          <button type="submit" class="btn btn-primary btn-lg" id="btn-enter-room" style="width: 100%;">
+            Enter Collaborative Room →
+          </button>
+          <button type="button" class="btn btn-secondary" id="btn-new-room" onclick="generateNewRoom()" style="width: 100%;">
+            ⚡ Generate Fresh Room Code
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Platform Highlights Grid -->
+    <div class="features-grid">
+      <div class="feature-item">
+        <div style="font-size: 1.5rem; margin-bottom: 8px;">📝</div>
+        <h3>Yjs CRDT Shared Notepad</h3>
+        <p>Character-level concurrent editing, automatic convergence, offline reconnect merge, and full version history restore.</p>
+      </div>
+
+      <div class="feature-item">
+        <div style="font-size: 1.5rem; margin-bottom: 8px;">🔢</div>
+        <h3>Atomic Shared Counter</h3>
+        <p>Serialized concurrency, duplicate request protection, and human-readable attributed operation history.</p>
+      </div>
+
+      <div class="feature-item">
+        <div style="font-size: 1.5rem; margin-bottom: 8px;">🎨</div>
+        <h3>Live Whiteboard Canvas</h3>
+        <p>Collaborative canvas with PEN, PENCIL, and HIGHLIGHTER. Mouse, touch, and stylus support with DPR scaling.</p>
+      </div>
+
+      <div class="feature-item">
+        <div style="font-size: 1.5rem; margin-bottom: 8px;">🗳️</div>
+        <h3>Polls & Quizzes</h3>
+        <p>Host-created live polls with duplicate vote policies and trivia quizzes with server-verified scoring.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const AVATAR_COLORS = ['#4f46e5', '#059669', '#d97706', '#db2777', '#0284c7', '#7c3aed', '#dc2626', '#16a34a'];
+
+    function getRandomColor() {
+      return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+    }
+
+    function generateCode() {
+      const p1 = Math.random().toString(36).substring(2, 6);
+      const p2 = Math.random().toString(36).substring(2, 6);
+      return `syn-${p1}-${p2}`;
+    }
+
+    const nameInput = document.getElementById('display-name');
+    const roomInput = document.getElementById('room-code');
+    const avatarPreview = document.getElementById('avatar-preview');
+
+    // Prefill display name from localStorage or random
+    const savedName = localStorage.getItem('synapse_display_name') || `Engineer-${Math.floor(Math.random() * 899 + 100)}`;
+    nameInput.value = savedName;
+
+    // Check URL params for room code
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomFromUrl = urlParams.get('room');
+    if (roomFromUrl) {
+      roomInput.value = roomFromUrl;
+    } else {
+      roomInput.value = generateCode();
+    }
+
+    function updateAvatar() {
+      const val = nameInput.value.trim() || 'A';
+      avatarPreview.textContent = val.charAt(0).toUpperCase();
+      let hash = 0;
+      for (let i = 0; i < val.length; i++) hash = (hash + val.charCodeAt(i)) & 0xffff;
+      avatarPreview.style.backgroundColor = AVATAR_COLORS[hash % AVATAR_COLORS.length];
+    }
+
+    nameInput.addEventListener('input', updateAvatar);
+    updateAvatar();
+
+    function generateNewRoom() {
+      roomInput.value = generateCode();
+      roomInput.focus();
+    }
+
+    async function handleEnterRoom(e) {
+      e.preventDefault();
+      const displayName = nameInput.value.trim();
+      const roomCode = roomInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+
+      if (!displayName || !roomCode) return;
+
+      localStorage.setItem('synapse_display_name', displayName);
+
+      // Check if this user is creating the room to register host token
+      try {
+        const res = await fetch('/api/room/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomCode, displayName }),
+        });
+        const data = await res.json();
+        if (data.ok && data.hostToken) {
+          // If we don't already have a token for this room, save this hostToken
+          if (!localStorage.getItem(`synapse_host_${roomCode}`)) {
+            localStorage.setItem(`synapse_host_${roomCode}`, data.hostToken);
+          }
+        }
+      } catch (err) {
+        console.warn('Room pre-creation check:', err.message);
+      }
+
+      window.location.href = `/room/${encodeURIComponent(roomCode)}`;
+    }
+
+    // Check server storage status
+    fetch('/health')
+      .then(res => res.json())
+      .then(data => {
+        const badgeText = document.getElementById('storage-status-text');
+        if (data.storage && data.storage.type) {
+          badgeText.textContent = `Storage: ${data.storage.type}`;
+        }
+      })
+      .catch(() => {
+        document.getElementById('storage-status-text').textContent = 'Live Server Ready';
+      });
+  </script>
+</body>
+</html>

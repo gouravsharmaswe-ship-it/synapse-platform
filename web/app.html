@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synapse — Collaborative Multiplayer Workspace</title>
+  <meta name="description" content="Collaborate in real time with Synapse: Yjs CRDT shared notepad, atomic counter, live polls, quizzes, and 3-tool whiteboard.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="app-header">
+    <div class="header-left">
+      <a href="/" class="brand-logo" title="Back to Synapse Home">
+        <div class="brand-icon">⚡</div>
+        <span>Synapse</span>
+      </a>
+
+      <!-- Room Code Pill & Copy Button -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="badge badge-accent" id="room-code-badge" style="font-family: var(--font-mono); font-size: 0.85rem; padding: 6px 12px;">
+          syn-room
+        </span>
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-link" onclick="copyShareableLink()" title="Copy invite link to clipboard">
+          🔗 Copy Link
+        </button>
+      </div>
+    </div>
+
+    <!-- Center: Room-Wide Accent Selector & Connection Status -->
+    <div class="header-center">
+      <div class="badge badge-success" id="connection-status-badge">
+        <span class="dot dot-online" id="connection-dot"></span>
+        <span id="connection-status-text">Connected</span>
+      </div>
+
+      <div class="badge" id="storage-status-badge" style="display: none;">
+        <span id="storage-status-text">Storage: Postgres</span>
+      </div>
+
+      <!-- Accent Color Swatches -->
+      <div class="accent-picker" title="Synchronize room accent for all participants">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-right: 2px;">THEME</span>
+        <div class="accent-swatch active" style="background-color: #4f46e5;" onclick="changeRoomAccent('#4f46e5')" title="Indigo"></div>
+        <div class="accent-swatch" style="background-color: #059669;" onclick="changeRoomAccent('#059669')" title="Emerald"></div>
+        <div class="accent-swatch" style="background-color: #d97706;" onclick="changeRoomAccent('#d97706')" title="Amber"></div>
+        <div class="accent-swatch" style="background-color: #e11d48;" onclick="changeRoomAccent('#e11d48')" title="Rose"></div>
+        <div class="accent-swatch" style="background-color: #0891b2;" onclick="changeRoomAccent('#0891b2')" title="Cyan"></div>
+        <div class="accent-swatch" style="background-color: #7c3aed;" onclick="changeRoomAccent('#7c3aed')" title="Violet"></div>
+      </div>
+    </div>
+
+    <!-- Right: Participant Stack & Reactions -->
+    <div class="header-right">
+      <!-- Attributed Emoji Reactions Palette -->
+      <div class="reaction-bar" title="Send live attributed reaction to room">
+        <button class="reaction-btn" onclick="sendReaction('🎉')" title="Celebrate">🎉</button>
+        <button class="reaction-btn" onclick="sendReaction('❤️')" title="Love">❤️</button>
+        <button class="reaction-btn" onclick="sendReaction('🚀')" title="Rocket">🚀</button>
+        <button class="reaction-btn" onclick="sendReaction('🔥')" title="Fire">🔥</button>
+        <button class="reaction-btn" onclick="sendReaction('👏')" title="Clap">👏</button>
+        <button class="reaction-btn" onclick="sendReaction('💡')" title="Idea">💡</button>
+        <button class="reaction-btn" onclick="sendReaction('🤯')" title="Mind Blown">🤯</button>
+        <button class="reaction-btn" onclick="sendReaction('🎯')" title="Bullseye">🎯</button>
+      </div>
+
+      <!-- Participant Avatars -->
+      <div class="participant-list" id="participant-avatars" title="Active participants in room">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main App Layout -->
+  <main class="app-container">
+    <div class="app-main-content">
+
+      <!-- Segmented View Switcher -->
+      <div class="nav-segmented">
+        <button type="button" class="nav-tab-btn active" id="tab-btn-workspace" onclick="switchMainTab('workspace')">
+          📝 Collaborative Workspace
+        </button>
+        <button type="button" class="nav-tab-btn" id="tab-btn-activities" onclick="switchMainTab('activities')">
+          ⚡ Interactive Activities Hub (3 Choices)
+        </button>
+      </div>
+
+      <!-- VIEW 1: COLLABORATIVE WORKSPACE (CRDT Notepad & Counter) -->
+      <section id="view-workspace" style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- CRDT Shared Notepad -->
+        <div class="card notepad-container">
+          <div class="card-header">
+            <div class="card-title">
+              <span>📝</span>
+              <span>Shared Notepad</span>
+              <span class="badge badge-accent" style="font-size: 0.75rem;">Yjs CRDT Synchronized</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-save-snapshot" onclick="saveManualSnapshot()">
+                💾 Save Snapshot
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-version-history" onclick="openVersionDrawer()">
+                ⏱️ Version History
+              </button>
+            </div>
+          </div>
+
+          <textarea id="notepad-textarea" class="notepad-textarea" placeholder="Start typing together in real-time... Simultaneous edits from peers will mathematically converge via Yjs CRDT with zero data loss."></textarea>
+
+          <div class="notepad-meta">
+            <span id="crdt-status-text">🟢 Document Converged · Ready for concurrent typing</span>
+            <span id="notepad-char-count">0 characters</span>
+          </div>
+        </div>
+
+        <!-- Shared Counter & Operation Attribution -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🔢</span>
+              <span>Shared Room Counter</span>
+              <span class="badge badge-accent">Atomic Concurrency</span>
+            </div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Protected with Idempotency & Log Attribution</span>
+          </div>
+
+          <div class="counter-box">
+            <div class="counter-value-display">
+              <span class="counter-num" id="counter-value">0</span>
+              <span class="counter-label">Current Room Total</span>
+            </div>
+
+            <div class="counter-actions">
+              <button type="button" class="btn btn-secondary btn-lg" onclick="mutateCounter('decrement', 1)" title="Decrease by 1">
+                − 1
+              </button>
+              <button type="button" class="btn btn-primary btn-lg" onclick="mutateCounter('increment', 1)" title="Increase by 1">
+                + 1
+              </button>
+              <button type="button" class="btn btn-primary btn-lg" onclick="mutateCounter('increment', 5)" title="Increase by 5">
+                + 5
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="mutateCounter('reset', 0)" style="margin-left: 8px;" title="Reset counter to zero">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Counter History Feed -->
+          <div style="margin-top: 16px;">
+            <div style="font-size: 0.825rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;">
+              Attributed Operation History
+            </div>
+            <div class="history-feed" id="counter-history-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: INTERACTIVE ACTIVITIES HUB (Exactly 3 Prominent Choices) -->
+      <section id="view-activities" style="display: none;">
+        <!-- Prominent Activity Selection Cards -->
+        <div class="activity-selection-grid">
+          <!-- Activity 1: POLL -->
+          <div class="activity-card" id="card-act-poll" onclick="selectActivity('POLL')">
+            <div>
+              <div class="activity-icon-wrap">🗳️</div>
+              <h3 class="activity-card-title">POLL</h3>
+              <p class="activity-card-desc">
+                Host-configured live voting with 2–8 choices, duplicate-vote policy enforcement, and animated live tallies.
+              </p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Open Poll Workspace →
+            </button>
+          </div>
+
+          <!-- Activity 2: QUIZ -->
+          <div class="activity-card" id="card-act-quiz" onclick="selectActivity('QUIZ')">
+            <div>
+              <div class="activity-icon-wrap">🧠</div>
+              <h3 class="activity-card-title">QUIZ</h3>
+              <p class="activity-card-desc">
+                Host-created multiple-choice trivia with server-side scoring, secret answer verification, and leaderboard.
+              </p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Open Quiz Challenge →
+            </button>
+          </div>
+
+          <!-- Activity 3: WHITEBOARD -->
+          <div class="activity-card" id="card-act-whiteboard" onclick="selectActivity('WHITEBOARD')">
+            <div>
+              <div class="activity-icon-wrap">🎨</div>
+              <h3 class="activity-card-title">WHITEBOARD</h3>
+              <p class="activity-card-desc">
+                Real-time drawing canvas with PEN, PENCIL, and HIGHLIGHTER. Mouse, touch, stylus, and DPR scaling.
+              </p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;">
+              Open Shared Canvas →
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Activity Display Panel -->
+        <div class="active-activity-panel" id="active-activity-container" style="display: none;">
+          <!-- POLL CONTAINER -->
+          <div id="activity-panel-poll" style="display: none;">
+            <div id="poll-view-root"></div>
+          </div>
+
+          <!-- QUIZ CONTAINER -->
+          <div id="activity-panel-quiz" style="display: none;">
+            <div id="quiz-view-root"></div>
+          </div>
+
+          <!-- WHITEBOARD CONTAINER -->
+          <div id="activity-panel-whiteboard" style="display: none;">
+            <!-- Whiteboard Toolbar (Exactly 3 Main Tools: PEN, PENCIL, HIGHLIGHTER) -->
+            <div class="whiteboard-toolbar">
+              <!-- Tools: PEN, PENCIL, HIGHLIGHTER -->
+              <div class="tool-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-right: 4px;">TOOL:</span>
+                <button type="button" class="tool-btn active" id="wb-tool-pen" onclick="setWbTool('pen')">
+                  🖊️ PEN
+                </button>
+                <button type="button" class="tool-btn" id="wb-tool-pencil" onclick="setWbTool('pencil')">
+                  ✏️ PENCIL
+                </button>
+                <button type="button" class="tool-btn" id="wb-tool-highlighter" onclick="setWbTool('highlighter')">
+                  🖍️ HIGHLIGHTER
+                </button>
+              </div>
+
+              <!-- Curated Colors -->
+              <div class="tool-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-right: 4px;">COLOR:</span>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  <button type="button" class="accent-swatch active" style="background-color: #0f172a;" onclick="setWbColor('#0f172a', this)" title="Midnight Ink"></button>
+                  <button type="button" class="accent-swatch" style="background-color: #4f46e5;" onclick="setWbColor('#4f46e5', this)" title="Indigo"></button>
+                  <button type="button" class="accent-swatch" style="background-color: #059669;" onclick="setWbColor('#059669', this)" title="Emerald"></button>
+                  <button type="button" class="accent-swatch" style="background-color: #d97706;" onclick="setWbColor('#d97706', this)" title="Amber"></button>
+                  <button type="button" class="accent-swatch" style="background-color: #dc2626;" onclick="setWbColor('#dc2626', this)" title="Crimson"></button>
+                  <button type="button" class="accent-swatch" style="background-color: #7c3aed;" onclick="setWbColor('#7c3aed', this)" title="Purple"></button>
+                  <button type="button" class="accent-swatch" style="background-color: #0891b2;" onclick="setWbColor('#0891b2', this)" title="Cyan"></button>
+                </div>
+              </div>
+
+              <!-- Stroke Width Presets -->
+              <div class="tool-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-right: 4px;">WIDTH:</span>
+                <select id="wb-width-select" class="input-field" style="padding: 4px 8px; font-size: 0.8rem;" onchange="setWbWidth(this.value)">
+                  <option value="2">Fine</option>
+                  <option value="4" selected>Medium</option>
+                  <option value="8">Thick</option>
+                </select>
+              </div>
+
+              <!-- Canvas Actions -->
+              <div class="tool-group">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="exportWhiteboardPng()">
+                  📷 Export PNG
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="clearWhiteboard()">
+                  🗑️ Clear Board
+                </button>
+              </div>
+            </div>
+
+            <!-- Canvas Drawing Area -->
+            <div class="canvas-wrapper">
+              <canvas id="whiteboard-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Version History Modal / Drawer -->
+  <div class="modal-backdrop" id="version-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+          <span>⏱️</span> Notepad Version History
+        </h3>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeVersionDrawer()">✕</button>
+      </div>
+      <div class="modal-body" id="version-list-container">
+        <!-- Versions rendered dynamically -->
+      </div>
+      <div style="padding: 12px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeVersionDrawer()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version Preview Modal -->
+  <div class="modal-backdrop" id="preview-modal">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Preview Version Snapshot</h3>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closePreviewModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="preview-meta" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;"></div>
+        <textarea id="preview-text" class="notepad-textarea" style="height: 220px;" readonly></textarea>
+      </div>
+      <div style="padding: 12px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closePreviewModal()">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-restore">Restore This Version</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Reactions Container -->
+  <div id="reaction-overlay"></div>
+
+  <!-- Scripts: Bundled Yjs + Synapse Client + Views + Coordinator -->
+  <script src="/vendor/yjs.bundle.js"></script>
+  <script src="/js/synapse-client.js"></script>
+  <script src="/js/yjs-binding.js"></script>
+  <script src="/js/whiteboard-view.js"></script>
+  <script src="/js/poll-view.js"></script>
+  <script src="/js/quiz-view.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

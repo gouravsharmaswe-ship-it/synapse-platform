@@ -1,0 +1,38 @@
+{
+  "name": "synapse-platform",
+  "version": "1.0.0",
+  "description": "Synapse — Polished, reliable real-time multiplayer collaboration platform",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "test": "node test/test.js",
+    "build:yjs": "mkdir -p web/vendor && esbuild --bundle node_modules/yjs/src/index.js --outfile=web/vendor/yjs.bundle.js --format=iife --global-name=Y --minify"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gouravsharmaswe-ship-it/synapse-platform.git"
+  },
+  "keywords": [
+    "synapse",
+    "collaboration",
+    "multiplayer",
+    "crdt",
+    "yjs",
+    "websockets",
+    "whiteboard",
+    "poll",
+    "quiz"
+  ],
+  "author": "Synapse Engineering",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.13.3",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.0",
+    "yjs": "^13.6.27"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
